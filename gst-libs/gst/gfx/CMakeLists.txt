@@ -4,6 +4,12 @@ project(gstreamer-qcom-gfx-1.0
   DESCRIPTION "GStreamer QTI Graphics base library"
 )
 
+# This module requires OpenGL ES (glesv2). Skip compilation if not found.
+if(NOT GLES_FOUND)
+  message(STATUS "Skipping gst/gfx: missing dependency glesv2 (GLES not found)")
+  return()
+endif()
+
 set(TARGET_NAME gstqtigfxbase)
 
 add_library(${TARGET_NAME} SHARED

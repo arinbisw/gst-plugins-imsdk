@@ -63,11 +63,11 @@ set(QTI_PLUGINS_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # Define the path to the common pkg-config template file used by all subdirectories
 set(BASE_COMMON_PC_IN ${CMAKE_CURRENT_SOURCE_DIR}/gst/common.pc.in)
 
-# gst/gfx: requires gstreamer-1.0
-if(GST_FOUND)
+# gst/gfx: requires gstreamer-1.0, glesv2
+if(GST_FOUND AND GLES_FOUND)
   add_subdirectory(gst/gfx)
 else()
-  message(STATUS "Skipping gst/gfx: missing dependency gstreamer-1.0")
+  message(STATUS "Skipping gst/gfx: missing dependency gstreamer-1.0 or glesv2")
 endif()
 
 # gst/utils: requires gstreamer-1.0, json-glib-1.0
@@ -77,7 +77,12 @@ else()
   message(STATUS "Skipping gst/utils: missing dependency gstreamer-1.0 or json-glib-1.0")
 endif()
 
-# gst/video: requires gstreamer-1.0, gstreamer-allocators-1.0, gstreamer-video-1.0
+# gst/video: core lib always built when base GST deps are present.
+# Three optional backend libs are built within the subdirectory based on
+# available hardware/software dependencies:
+#   gstqtivideobase-c2d    (requires adreno/c2d2.h)
+#   gstqtivideobase-gles   (requires glesv2)
+#   gstqtivideobase-opencv (requires opencv4)
 if(GST_FOUND AND GST_ALLOC_FOUND AND GST_VIDEO_FOUND)
   add_subdirectory(gst/video)
 else()
