@@ -10,7 +10,7 @@ set(GST_PLUGINS_QTI_OSS_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_
 set(GST_PLUGINS_QTI_OSS_INSTALL_INCDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
 set(GST_PLUGINS_QTI_OSS_INSTALL_CONFIG "${CMAKE_INSTALL_SYSCONFDIR}/configs")
 
-option(ENABLE_GST_IMSDK_PLUGINS "Enable IMSDK Plugins" OFF)
+option(ENABLE_GST_IMSDK_PLUGINS "Enable IMSDK Plugins" ON)
 
 option(ENABLE_GST_CAMERA_PLUGINS "Enable Camera Plugins" OFF) # not enabled in opensource mainline
 option(ENABLE_GST_EXT_SOFTWARE_PLUGINS "Enable Software plugins depends on external software" ${ENABLE_GST_IMSDK_PLUGINS})
@@ -102,9 +102,13 @@ pkg_check_modules(GST_ALLOC gstreamer-allocators-1.0>=${GST_VERSION_REQUIRED})
 pkg_check_modules(GST_VIDEO gstreamer-video-1.0>=${GST_VERSION_REQUIRED})
 pkg_check_modules(GST_AUDIO gstreamer-audio-1.0>=${GST_VERSION_REQUIRED})
 pkg_check_modules(GST_RTSP gstreamer-rtsp-server-1.0>=${GST_VERSION_REQUIRED})
+pkg_check_modules(GST_PBUTILS gstreamer-pbutils-1.0>=${GST_VERSION_REQUIRED})
+pkg_check_modules(GST_CODECPARSERS gstreamer-codecparsers-1.0>=${GST_VERSION_REQUIRED})
 
 # Optional external packages
 pkg_check_modules(CAIRO cairo)
+pkg_check_modules(QCOM_VIDEO_CTRL qcom-video-ctrl)
+pkg_check_modules(PROTOBUF_LITE protobuf-lite)
 
 # QTI OSS base libraries (built by gst-libs)
 pkg_check_modules(GST_QCOM_UTILS gstreamer-qcom-oss-utils-1.0>=1.0.0)
@@ -140,13 +144,39 @@ function(add_plugin_if option_var plugin_dir)
 endfunction()
 
 # Camera plugins (sys/)
-add_plugin_if(ENABLE_GST_PLUGIN_CAMIMGREPROC    sys/camimgreproc)
-add_plugin_if(ENABLE_GST_PLUGIN_CAMREPROC       sys/camreproc)
-add_plugin_if(ENABLE_GST_PLUGIN_JPEGENC         sys/jpegenc)
-add_plugin_if(ENABLE_GST_PLUGIN_QMMFSRC         sys/qmmfsrc)
+# sys/camimgreproc: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#                  gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,
+#                  gstreamer-qcom-oss-video-1.0, gstreamer-qcom-oss-allocators-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_CAMIMGREPROC    sys/camimgreproc
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND)
+
+# sys/camreproc: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#               gstreamer-video-1.0, gstreamer-qcom-oss-video-1.0,
+#               gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_CAMREPROC       sys/camreproc
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_VIDEO_FOUND GST_QCOM_UTILS_FOUND)
+
+# sys/jpegenc: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#              gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,
+#              gstreamer-qcom-oss-video-1.0, gstreamer-qcom-oss-allocators-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_JPEGENC         sys/jpegenc
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND)
+
+# sys/qmmfsrc: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#              gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,
+#              gstreamer-qcom-oss-video-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_QMMFSRC         sys/qmmfsrc
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND)
 
 # External Software Plugins (ext/)
-add_plugin_if(ENABLE_GST_PLUGIN_REDISSINK       ext/redissink)
+# ext/redissink: requires gstreamer-1.0, gstreamer-base-1.0,
+#                gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_REDISSINK       ext/redissink
+  GST_FOUND GST_BASE_FOUND GST_QCOM_UTILS_FOUND)
 
 # Messaging Plugins (gst/)
 # gst/msgbroker: requires gstreamer-1.0, gstreamer-base-1.0
@@ -166,7 +196,12 @@ add_plugin_if(ENABLE_GST_PLUGIN_METAMUX         gst/metamux
 add_plugin_if(ENABLE_GST_PLUGIN_METATRANSFORM   gst/metatransform
   GST_FOUND GST_BASE_FOUND GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND)
 
-add_plugin_if(ENABLE_GST_PLUGIN_MLACONVERTER    ext/mlaconverter)
+# ext/mlaconverter: requires gstreamer-1.0, gstreamer-base-1.0,
+#                   gstreamer-allocators-1.0, gstreamer-audio-1.0,
+#                   gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLACONVERTER    ext/mlaconverter
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND GST_AUDIO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_ML_FOUND)
 
 # gst/mldemux: requires gstreamer-1.0, gstreamer-base-1.0,
 #              gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-ml-1.0
@@ -197,10 +232,34 @@ add_plugin_if(ENABLE_GST_PLUGIN_MLPOSTPROCESS   gst/mlpostprocess
   GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND
   GST_QCOM_ML_FOUND GST_QCOM_MEM_FOUND)
 
-add_plugin_if(ENABLE_GST_PLUGIN_MLQNN           ext/mlqnn)
-add_plugin_if(ENABLE_GST_PLUGIN_MLSNPE          ext/mlsnpe)
-add_plugin_if(ENABLE_GST_PLUGIN_MLTFLITE        ext/mltflite)
-add_plugin_if(ENABLE_GST_PLUGIN_MLONNX          ext/mlonnx)
+# ext/mlqnn: requires gstreamer-1.0, gstreamer-base-1.0,
+#            gstreamer-allocators-1.0, gstreamer-qcom-oss-utils-1.0,
+#            gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLQNN           ext/mlqnn
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_ML_FOUND)
+
+# ext/mlsnpe: requires gstreamer-1.0, gstreamer-base-1.0,
+#             gstreamer-allocators-1.0, gstreamer-qcom-oss-utils-1.0,
+#             gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLSNPE          ext/mlsnpe
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_ML_FOUND)
+
+# ext/mltflite: requires gstreamer-1.0, gstreamer-base-1.0,
+#               gstreamer-allocators-1.0, gstreamer-qcom-oss-ml-1.0,
+#               gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLTFLITE        ext/mltflite
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND
+  GST_QCOM_ML_FOUND GST_QCOM_UTILS_FOUND)
+
+# ext/mlonnx: requires gstreamer-1.0, gstreamer-base-1.0,
+#             gstreamer-allocators-1.0, gstreamer-qcom-oss-ml-1.0,
+#             gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLONNX          ext/mlonnx
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND
+  GST_QCOM_ML_FOUND GST_QCOM_UTILS_FOUND)
+
 add_plugin_if(ENABLE_GST_PLUGIN_MLTOOLS         tools/mltools)
 
 # gst/mlvconverter: requires gstreamer-1.0, gstreamer-base-1.0,
@@ -218,7 +277,12 @@ add_plugin_if(ENABLE_GST_PLUGIN_OBJTRACKER      gst/objtracker
   GST_FOUND GST_BASE_FOUND GST_VIDEO_FOUND
   GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND)
 
-add_plugin_if(ENABLE_GST_PLUGIN_RESTRICTED_ZONE ext/restricted-zone)
+# ext/restricted-zone: requires gstreamer-1.0, gstreamer-base-1.0,
+#                      gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,
+#                      gstreamer-qcom-oss-video-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_RESTRICTED_ZONE ext/restricted-zone
+  GST_FOUND GST_BASE_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND)
 
 # Video Processing plugins (gst/)
 # gst/vcomposer: requires gstreamer-1.0, gstreamer-allocators-1.0,
@@ -262,7 +326,12 @@ add_plugin_if(ENABLE_GST_PLUGIN_BATCH           gst/batch
 add_plugin_if(ENABLE_GST_PLUGIN_RTSPBIN         gst/rtspbin
   GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND GST_RTSP_FOUND)
 
-add_plugin_if(ENABLE_GST_PLUGIN_SMARTVENCBIN    sys/smartvencbin)
+# sys/smartvencbin: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#                   gstreamer-video-1.0, gstreamer-pbutils-1.0,
+#                   qcom-video-ctrl, gstreamer-qcom-oss-video-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_SMARTVENCBIN    sys/smartvencbin
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_PBUTILS_FOUND QCOM_VIDEO_CTRL_FOUND GST_QCOM_VIDEO_FOUND)
 
 # gst/socket: requires gstreamer-1.0, gstreamer-allocators-1.0,
 #             gstreamer-video-1.0, gstreamer-qcom-oss-video-1.0,
@@ -285,21 +354,86 @@ add_plugin_if(ENABLE_GST_SAMPLE_APPS            examples/sample-apps)
 add_plugin_if(ENABLE_GST_SAMPLE_APPS            examples/sample-apps/gst-sample-apps-utils)
 add_plugin_if(ENABLE_GST_PLUGIN_TOOLS           tools/gst-plugin-tools)
 add_plugin_if(ENABLE_GST_TEST_FRAMEWORK         tests/test-framework)
-add_plugin_if(ENABLE_GST_UMD_DAEMON             sys/umd-daemon)
+
+# sys/umd-daemon: requires gstreamer-1.0, gstreamer-video-1.0
+add_plugin_if(ENABLE_GST_UMD_DAEMON             sys/umd-daemon
+  GST_FOUND GST_VIDEO_FOUND)
 
 # Old ML Plugins (ext/)
-add_plugin_if(ENABLE_GST_PLUGIN_MLVDETECTION        ext/mlvdetection)
-add_plugin_if(ENABLE_GST_PLUGIN_MLVPOSE             ext/mlvpose)
-add_plugin_if(ENABLE_GST_PLUGIN_MLVSEGMENTATION     ext/mlvsegmentation)
-add_plugin_if(ENABLE_GST_PLUGIN_MLVSUPERRESOLUTION  ext/mlvsuperresolution)
+# ext/mlvdetection: requires gstreamer-1.0, gstreamer-base-1.0,
+#                   gstreamer-allocators-1.0, gstreamer-video-1.0, cairo,
+#                   gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-video-1.0,
+#                   gstreamer-qcom-oss-allocators-1.0, gstreamer-qcom-oss-ml-1.0,
+#                   gstreamer-qcom-oss-memory-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLVDETECTION        ext/mlvdetection
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND CAIRO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND
+  GST_QCOM_ML_FOUND GST_QCOM_MEM_FOUND)
+
+# ext/mlvpose: requires gstreamer-1.0, gstreamer-base-1.0,
+#              gstreamer-allocators-1.0, gstreamer-video-1.0, cairo,
+#              gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-video-1.0,
+#              gstreamer-qcom-oss-allocators-1.0, gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLVPOSE             ext/mlvpose
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND CAIRO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND
+  GST_QCOM_ML_FOUND)
+
+# ext/mlvsegmentation: requires gstreamer-1.0, gstreamer-base-1.0,
+#                      gstreamer-allocators-1.0, gstreamer-video-1.0,
+#                      gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-video-1.0,
+#                      gstreamer-qcom-oss-allocators-1.0, gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLVSEGMENTATION     ext/mlvsegmentation
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND
+  GST_QCOM_ML_FOUND)
+
+# ext/mlvsuperresolution: requires gstreamer-1.0, gstreamer-base-1.0,
+#                         gstreamer-allocators-1.0, gstreamer-video-1.0,
+#                         gstreamer-qcom-oss-utils-1.0, gstreamer-qcom-oss-video-1.0,
+#                         gstreamer-qcom-oss-allocators-1.0, gstreamer-qcom-oss-ml-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_MLVSUPERRESOLUTION  ext/mlvsuperresolution
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND
+  GST_QCOM_ML_FOUND)
 
 # ACK SP Plugins (sys/ and ext/)
-add_plugin_if(ENABLE_GST_PLUGIN_DFS             sys/dfs)
-add_plugin_if(ENABLE_GST_PLUGIN_DNGPACKER       sys/dngpacker)
-add_plugin_if(ENABLE_GST_PLUGIN_HEIFMUX         ext/heifmux)
-add_plugin_if(ENABLE_GST_PLUGIN_HEXAGON         sys/hexagon)
-add_plugin_if(ENABLE_GST_PLUGIN_JPEGPACKER      sys/jpegpacker)
-add_plugin_if(ENABLE_GST_PLUGIN_MLAIC           ext/mlaic)
+# sys/dfs: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#          gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,
+#          gstreamer-qcom-oss-video-1.0, gstreamer-qcom-oss-allocators-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_DFS             sys/dfs
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_QCOM_UTILS_FOUND GST_QCOM_VIDEO_FOUND GST_QCOM_ALLOC_FOUND)
+
+# sys/dngpacker: requires gstreamer-1.0, gstreamer-base-1.0,
+#               gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_DNGPACKER       sys/dngpacker
+  GST_FOUND GST_BASE_FOUND GST_VIDEO_FOUND GST_QCOM_UTILS_FOUND)
+
+# ext/heifmux: requires gstreamer-1.0, gstreamer-allocators-1.0,
+#              gstreamer-video-1.0, gstreamer-codecparsers-1.0,
+#              gstreamer-qcom-oss-video-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_HEIFMUX         ext/heifmux
+  GST_FOUND GST_ALLOC_FOUND GST_VIDEO_FOUND
+  GST_CODECPARSERS_FOUND GST_QCOM_VIDEO_FOUND)
+
+# sys/hexagon: requires gstreamer-1.0, gstreamer-base-1.0,
+#              gstreamer-video-1.0, gstreamer-qcom-oss-video-1.0,
+#              gstreamer-qcom-oss-utils-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_HEXAGON         sys/hexagon
+  GST_FOUND GST_BASE_FOUND GST_VIDEO_FOUND
+  GST_QCOM_VIDEO_FOUND GST_QCOM_UTILS_FOUND)
+
+# sys/jpegpacker: requires gstreamer-1.0, gstreamer-base-1.0
+add_plugin_if(ENABLE_GST_PLUGIN_JPEGPACKER      sys/jpegpacker
+  GST_FOUND GST_BASE_FOUND)
+
+# ext/mlaic: requires gstreamer-1.0, gstreamer-base-1.0,
+#            gstreamer-allocators-1.0, gstreamer-qcom-oss-ml-1.0,
+#            gstreamer-qcom-oss-utils-1.0, protobuf-lite
+add_plugin_if(ENABLE_GST_PLUGIN_MLAIC           ext/mlaic
+  GST_FOUND GST_BASE_FOUND GST_ALLOC_FOUND
+  GST_QCOM_ML_FOUND GST_QCOM_UTILS_FOUND PROTOBUF_LITE_FOUND)
 
 # gst/overlay: requires gstreamer-1.0, gstreamer-allocators-1.0,
 #              gstreamer-video-1.0, gstreamer-qcom-oss-utils-1.0,

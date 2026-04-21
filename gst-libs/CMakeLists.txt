@@ -15,6 +15,7 @@ find_package(PkgConfig)
 pkg_check_modules(GST REQUIRED gstreamer-1.0>=${GST_VERSION_REQUIRED})
 pkg_check_modules(GST_ALLOC REQUIRED gstreamer-allocators-1.0>=${GST_VERSION_REQUIRED})
 pkg_check_modules(GST_VIDEO REQUIRED gstreamer-video-1.0>=${GST_VERSION_REQUIRED})
+
 pkg_check_modules(GST_JSON REQUIRED json-glib-1.0)
 pkg_check_modules(FASTCV qcom-fastcv-binaries)
 pkg_check_modules(EGL egl)
@@ -104,7 +105,7 @@ else()
 endif()
 
 # gst/cv: requires gstreamer-1.0
-if(GST_FOUND)
+if(GST_FOUND AND OPEN_CV_FOUND)
   add_subdirectory(gst/cv)
 else()
   message(STATUS "Skipping gst/cv: missing dependency gstreamer-1.0")
@@ -123,3 +124,4 @@ if(GST_FOUND AND GST_ALLOC_FOUND AND QMMF_CAMERA_METADATA_FOUND)
 else()
   message(STATUS "Skipping gst/camera: missing dependency gstreamer-1.0, gstreamer-allocators-1.0, or qmmf_camera_metadata")
 endif()
+
